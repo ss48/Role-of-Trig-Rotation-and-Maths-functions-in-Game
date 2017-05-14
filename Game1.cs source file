@@ -1,0 +1,193 @@
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using System;
+//using System.Globalization;
+
+namespace Tile_and_Grids
+
+{
+    
+    public class Game1 : Game
+    {
+        GraphicsDeviceManager graphics;
+        SpriteBatch spriteBatch;
+        Texture2D Boat, Anim, Tile, Fish, Smiley;
+        Vector2 BgTileOffset = Vector2.Zero;
+        const float BgDegPerSec = 33.0f;
+      
+       //for game state calculation
+        double TotalSeconds = 0.0;
+        double ElapsedSeconds = 0.0;
+
+        int AnimFrameNum = 0;
+        double AnimFrameElaped = 0;
+        const double AnimFrameDelay = 0.1f;
+        const int OrbitCount=8;
+
+        protected static readonly Rectangle rectSmiley = new Rectangle(0, 0, 180, 180);
+        protected static readonly Vector2 originSmiley = new Vector2(90, 90);
+        protected const float Scale = 1.0f;
+        protected const float NoRotation = 0.0f;
+        public Game1()
+        {
+            graphics = new GraphicsDeviceManager(this);
+            Content.RootDirectory = "Content";
+            
+        }
+
+        
+        protected override void Initialize()
+        {
+            // TODO: Add your initialization logic here
+
+            base.Initialize();
+        }
+
+      
+        
+        protected override void LoadContent()
+        {
+            // Create a new SpriteBatch, which can be used to draw textures.
+            spriteBatch = new SpriteBatch(GraphicsDevice);
+            Smiley = Content.Load<Texture2D>("smiley");
+            Boat = Content.Load<Texture2D>("boat");
+            Fish = Content.Load<Texture2D>("fish");
+            Anim = Content.Load<Texture2D>("run2");
+            Tile = Content.Load<Texture2D>("wave");
+        }
+
+        
+        protected override void UnloadContent()
+        {
+            // TODO: Unload any non ContentManager content here
+           
+        }
+
+       
+        protected override void Update(GameTime gameTime)
+        {
+           //track elapsed time since last frame, add since the game started
+           // records the time that has elapsed since the last call to the update and other tracks the total time that the game has been running.
+           ElapsedSeconds = gameTime.ElapsedGameTime.TotalSeconds*2;
+           TotalSeconds += ElapsedSeconds;
+          
+           base.Update(gameTime);
+        }
+
+       
+        protected override void Draw(GameTime gameTime)
+        {
+            GraphicsDevice.Clear(Color.CornflowerBlue);
+            spriteBatch.Begin();
+            DrawBackgroundTile(spriteBatch);
+           DrawTintedBoat(spriteBatch);
+           DrawTransparentFish(spriteBatch);
+           DrawAnimatedRun(spriteBatch);
+           DrawOrbitingFishes(spriteBatch);
+            spriteBatch.End();
+            base.Draw(gameTime);
+        }
+       
+       void DrawBackgroundTile(SpriteBatch spriteBatch)
+        {
+           double degree = BgDegPerSec * TotalSeconds;
+           double radians = MathHelper.ToRadians((float)degree);
+           BgTileOffset.X += -50.0f * (float)ElapsedSeconds;
+           BgTileOffset.Y = (float)(50 * Math.Sin(radians));
+           // make sure that the first tile isn't too far left
+          while(BgTileOffset.X<-Tile.Width)
+          {
+             BgTileOffset.X += Tile.Width;
+          }
+          // make sure that the first tile isn't too far right
+          while (BgTileOffset.X >0)
+          {
+             BgTileOffset.X -= Tile.Width;
+          }
+          // make sure that the first tile isn't too far up
+          while (BgTileOffset.Y < -Tile.Height)
+          {
+             BgTileOffset.Y += Tile.Height;
+          }
+          // make sure that the first tile isn't too far down
+          while (BgTileOffset.Y >0)
+          {
+             BgTileOffset.Y -= Tile.Height;
+          }
+
+          // init current tile location with location of the top, left tile
+         Vector2 Loc = BgTileOffset;
+         // draw our background tile in a grid that fills the screen
+          for (int y = 0; y <= GraphicsDevice.Viewport.Height/Tile.Height +1; y++ )
+          {
+             Loc.Y = BgTileOffset.Y + y * Tile.Height;
+             for (int x = 0; x <= GraphicsDevice.Viewport.Width / Tile.Width + 1; x++)
+             {
+                Loc.X = BgTileOffset.X + x * Tile.Width;
+                spriteBatch.Draw(Tile,Loc,Color.White);
+             }
+          }
+ }    
+     void DrawTintedBoat(SpriteBatch spriteBatch)
+       {
+          double degree = TotalSeconds * 120;
+          double radians = MathHelper.ToRadians((float)degree);
+          float bias = (float)Math.Sin(radians);
+        //clamp the output of sine from [-1,1] to [0,1]
+       // bias=(bias+1)/2;
+     
+       Color Color = new Color(1,bias,bias);
+       Vector2 Loc = new Vector2(440,450);
+       spriteBatch.Draw(Boat,Loc,Color);
+
+       }
+     void DrawTransparentFish(SpriteBatch spriteBatch)
+     {
+        double degree = TotalSeconds * 66;
+        double radians = MathHelper.ToRadians((float)degree);
+        float Opacity = (float)Math.Sin(radians);
+        //clamp the output of sine from [-1,1] to [0,1]
+        Opacity=(Opacity+1)/2;
+
+        Color Color = new Color(1, 1, 1, Opacity);
+        Vector2 Loc = new Vector2(650, 850);
+        spriteBatch.Draw(Fish, Loc, Color);
+
+     }
+     void DrawAnimatedRun(SpriteBatch spriteBatch)
+     {
+        AnimFrameElaped += ElapsedSeconds*900;
+        //is it time to move on to the next frame?
+        if(AnimFrameElaped >= AnimFrameDelay)
+        {
+           int frameCount = Anim.Width / Anim.Height+3;
+           //add one, take modulus of the frame count to keep
+           //the index within the valid range
+           AnimFrameNum = (AnimFrameNum +1) % frameCount;
+           //rest the elaped counter, start counting again
+           AnimFrameElaped = 0;
+           // select the current animation frame, based on our index
+           Rectangle rect = new Rectangle(AnimFrameNum*Anim.Width/7,0 , Anim.Width/7, Anim.Height);
+           Vector2 Loc = new Vector2(600,200);
+           spriteBatch.Draw(Anim,Loc,rect,Color.White);
+        }
+             }
+       void DrawOrbitingFishes(SpriteBatch spriteBatch)
+     {
+        double degrees = TotalSeconds * 33;
+        double radians = MathHelper.ToRadians((float)degrees);
+          //calculate the angle between each sprite (delat)
+        double delta = 2.0f * Math.PI / OrbitCount;
+        Vector2 Loc = Vector2.Zero;
+          for(int i=0; i<OrbitCount;i++)
+          {
+             float Cos = (float)Math.Cos(radians + delta * i);
+             float Sin = (float)Math.Sin(radians + delta * i);
+             Loc.X = 1400.0f + 290.0f * Cos;
+             Loc.Y = 540.0f + 220.0f * Sin;
+             float layer = (Sin + 1.0f) / 2.0f;
+             spriteBatch.Draw(Fish, Loc, rectSmiley, Color.White, NoRotation,originSmiley, Scale, SpriteEffects.None, layer);
+          }
+     }
+    }}
